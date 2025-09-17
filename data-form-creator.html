@@ -8,9 +8,16 @@
     body {font-family: Arial, sans-serif; margin: 20px; background: #fafafa;}
     h1 {color: #e63946;}
     table {border-collapse: collapse; width: 100%; background: white;}
-    th, td {border: 1px solid #ddd; padding: 10px; text-align: left;}
+    th, td {border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: middle;}
     th {background: #f6d365;}
     tr:nth-child(even) {background: #f9f9f9;}
+    button.whatsapp-btn {
+      background: #25D366; border: none; color: white; padding: 6px 10px;
+      border-radius: 6px; cursor: pointer; font-size: 14px;
+    }
+    select {
+      padding: 5px; border-radius: 6px; border: 1px solid #ccc;
+    }
   </style>
 </head>
 <body>
@@ -27,6 +34,7 @@
         <th>Location</th>
         <th>Category</th>
         <th>Collaboration</th>
+        <th>Status</th>
       </tr>
     </thead>
     <tbody id="data"></tbody>
@@ -35,7 +43,7 @@
   <!-- Firebase SDK -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.11/firebase-app.js";
-    import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/9.6.11/firebase-firestore.js";
+    import { getFirestore, collection, getDocs, doc, updateDoc } from "https://www.gstatic.com/firebasejs/9.6.11/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyAzoGp2rt4CB9e5yazdlK-0G28Dp7TbXtQ",
@@ -56,26 +64,57 @@
       const tbody = document.getElementById("data");
 
       if (snapshot.empty) {
-        tbody.innerHTML = `<tr><td colspan="9">No registrations found</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="10">No registrations found</td></tr>`;
         return;
       }
 
-      snapshot.forEach(doc => {
-        const d = doc.data();
+      snapshot.forEach(docSnap => {
+        const d = docSnap.data();
+        const id = docSnap.id;
         const row = document.createElement("tr");
+
         row.innerHTML = `
           <td>${d.name || "-"}</td>
           <td>${d.email || "-"}</td>
-          <td>${d.whatsapp || "-"}</td>
+          <td>
+            ${d.whatsapp || "-"} <br>
+            <button class="whatsapp-btn" onclick="openWhatsApp('${d.whatsapp}')">Chat</button>
+          </td>
           <td>${d.insta || "-"}</td>
           <td>${d.followers || "-"}</td>
           <td>${d.reach || "-"}</td>
           <td>${d.location || "-"}</td>
           <td>${d.category || "-"}</td>
           <td>${d.collab || "-"}</td>
+          <td>
+            <select onchange="updateStatus('${id}', this.value)">
+              <option value="Pending" ${d.status==="Pending" ? "selected":""}>Pending</option>
+              <option value="Connected" ${d.status==="Connected" ? "selected":""}>Connected</option>
+              <option value="Rejected" ${d.status==="Rejected" ? "selected":""}>Rejected</option>
+            </select>
+          </td>
         `;
         tbody.appendChild(row);
       });
+    }
+
+    // Make WhatsApp button work
+    window.openWhatsApp = function(number){
+      if(!number) return alert("No number available");
+      const formatted = number.replace(/\D/g,''); // remove non-numeric
+      window.open(`https://wa.me/${formatted}`, "_blank");
+    }
+
+    // Update status in Firestore
+    window.updateStatus = async function(id, status){
+      try {
+        const ref = doc(db, "influencers", id);
+        await updateDoc(ref, { status });
+       
+      } catch (err) {
+        console.error(err);
+        
+      }
     }
 
     loadData();

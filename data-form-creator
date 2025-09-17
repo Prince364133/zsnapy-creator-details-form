@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Influencer Admin Panel</title>
+  <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-firestore.js"></script>
+  <style>
+    body {font-family: Arial, sans-serif; margin: 20px; background: #fafafa;}
+    h1 {color: #e63946;}
+    table {border-collapse: collapse; width: 100%; background: white;}
+    th, td {border: 1px solid #ddd; padding: 10px; text-align: left;}
+    th {background: #f6d365;}
+  </style>
+</head>
+<body>
+  <h1>Influencer Registrations – Garba Night 2025</h1>
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Email</th>
+        <th>WhatsApp</th>
+        <th>Platform</th>
+        <th>Followers</th>
+        <th>Reach</th>
+        <th>Location</th>
+        <th>Category</th>
+        <th>Collaboration</th>
+      </tr>
+    </thead>
+    <tbody id="data"></tbody>
+  </table>
+
+  <script>
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.11/firebase-app.js";
+    import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/9.6.11/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyAzoGp2rt4CB9e5yazdlK-0G28Dp7TbXtQ",
+      authDomain: "zsnapypro-d9d22.firebaseapp.com",
+      projectId: "zsnapypro-d9d22",
+      storageBucket: "zsnapypro-d9d22.firebasestorage.app",
+      messagingSenderId: "614389089654",
+      appId: "1:614389089654:web:b4e8d502a8c0e996146657",
+      measurementId: "G-7EVYDYL4GX"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    async function loadData(){
+      const snapshot = await getDocs(collection(db, "influencers"));
+      let tbody = document.getElementById("data");
+      snapshot.forEach(doc => {
+        let d = doc.data();
+        tbody.innerHTML += `
+          <tr>
+            <td>${d.name}</td>
+            <td>${d.email}</td>
+            <td>${d.whatsapp}</td>
+            <td>${d.insta}</td>
+            <td>${d.followers}</td>
+            <td>${d.reach}</td>
+            <td>${d.location}</td>
+            <td>${d.category}</td>
+            <td>${d.collab}</td>
+          </tr>`;
+      });
+    }
+    loadData();
+  </script>
+</body>
+</html>

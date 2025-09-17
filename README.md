@@ -1,0 +1,1 @@
+# zsnapy-creator-details-form

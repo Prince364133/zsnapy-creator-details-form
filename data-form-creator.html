@@ -4,14 +4,13 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Influencer Admin Panel</title>
-  <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-firestore.js"></script>
   <style>
     body {font-family: Arial, sans-serif; margin: 20px; background: #fafafa;}
     h1 {color: #e63946;}
     table {border-collapse: collapse; width: 100%; background: white;}
     th, td {border: 1px solid #ddd; padding: 10px; text-align: left;}
     th {background: #f6d365;}
+    tr:nth-child(even) {background: #f9f9f9;}
   </style>
 </head>
 <body>
@@ -33,7 +32,8 @@
     <tbody id="data"></tbody>
   </table>
 
-  <script>
+  <!-- Firebase SDK -->
+  <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.11/firebase-app.js";
     import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/9.6.11/firebase-firestore.js";
 
@@ -41,34 +41,43 @@
       apiKey: "AIzaSyAzoGp2rt4CB9e5yazdlK-0G28Dp7TbXtQ",
       authDomain: "zsnapypro-d9d22.firebaseapp.com",
       projectId: "zsnapypro-d9d22",
-      storageBucket: "zsnapypro-d9d22.firebasestorage.app",
+      storageBucket: "zsnapypro-d9d22.appspot.com",
       messagingSenderId: "614389089654",
       appId: "1:614389089654:web:b4e8d502a8c0e996146657",
       measurementId: "G-7EVYDYL4GX"
     };
 
+    // Initialize Firebase
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
     async function loadData(){
       const snapshot = await getDocs(collection(db, "influencers"));
-      let tbody = document.getElementById("data");
+      const tbody = document.getElementById("data");
+
+      if (snapshot.empty) {
+        tbody.innerHTML = `<tr><td colspan="9">No registrations found</td></tr>`;
+        return;
+      }
+
       snapshot.forEach(doc => {
-        let d = doc.data();
-        tbody.innerHTML += `
-          <tr>
-            <td>${d.name}</td>
-            <td>${d.email}</td>
-            <td>${d.whatsapp}</td>
-            <td>${d.insta}</td>
-            <td>${d.followers}</td>
-            <td>${d.reach}</td>
-            <td>${d.location}</td>
-            <td>${d.category}</td>
-            <td>${d.collab}</td>
-          </tr>`;
+        const d = doc.data();
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td>${d.name || "-"}</td>
+          <td>${d.email || "-"}</td>
+          <td>${d.whatsapp || "-"}</td>
+          <td>${d.insta || "-"}</td>
+          <td>${d.followers || "-"}</td>
+          <td>${d.reach || "-"}</td>
+          <td>${d.location || "-"}</td>
+          <td>${d.category || "-"}</td>
+          <td>${d.collab || "-"}</td>
+        `;
+        tbody.appendChild(row);
       });
     }
+
     loadData();
   </script>
 </body>

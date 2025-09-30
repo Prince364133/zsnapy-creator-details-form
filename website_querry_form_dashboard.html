@@ -269,11 +269,12 @@
             <th>Message</th>
             <th>Submitted</th>
             <th>Source</th>
+            <th>Actions</th>
           </tr>
         </thead>
         <tbody id="tableBody">
           <tr>
-            <td colspan="7" class="loading">
+            <td colspan="8" class="loading">
               <div class="spinner"></div>
               Loading queries...
             </td>
@@ -344,7 +345,7 @@
         // Show loading
         tableBody.innerHTML = `
           <tr>
-            <td colspan="7" class="loading">
+            <td colspan="8" class="loading">
               <div class="spinner"></div>
               Loading queries...
             </td>
@@ -383,7 +384,7 @@
         showError('Error loading queries: ' + error.message);
         tableBody.innerHTML = `
           <tr>
-            <td colspan="7" class="error" style="text-align: center;">
+            <td colspan="8" class="error" style="text-align: center;">
               Failed to load queries: ${error.message}
             </td>
           </tr>
@@ -398,7 +399,7 @@
       if (queries.length === 0) {
         tableBody.innerHTML = `
           <tr>
-            <td colspan="7" class="no-data">
+            <td colspan="8" class="no-data">
               📭 No queries found
             </td>
           </tr>
@@ -414,6 +415,7 @@
           (query.submittedAt ? new Date(query.submittedAt) : new Date());
         
         const row = document.createElement('tr');
+        row.setAttribute('data-id', query.id);
         row.innerHTML = `
           <td><span class="badge">${index + 1}</span></td>
           <td><strong>${escapeHtml(query.name || 'N/A')}</strong></td>
@@ -422,10 +424,57 @@
           <td class="message-cell">${escapeHtml(query.message || 'N/A')}</td>
           <td class="time-cell">${timestamp.toLocaleString()}</td>
           <td><span class="badge">${query.source || 'contact-form'}</span></td>
+          <td class="actions-cell">
+            <button class="delete-btn" onclick="deleteQuery('${query.id}')">🗑️ Delete</button>
+          </td>
         `;
         tableBody.appendChild(row);
       });
     }
+
+    // Delete query function
+    async function deleteQuery(queryId) {
+      if (!confirm('Are you sure you want to delete this query? This action cannot be undone.')) {
+        return;
+      }
+
+      try {
+        console.log(`🗑️ Deleting query: ${queryId}`);
+        
+        // Disable delete button
+        const row = document.querySelector(`tr[data-id="${queryId}"]`);
+        const deleteBtn = row.querySelector('.delete-btn');
+        deleteBtn.disabled = true;
+        deleteBtn.textContent = 'Deleting...';
+        
+        // Delete from Firestore
+        await db.collection('queries').doc(queryId).delete();
+        
+        console.log(`✅ Query deleted: ${queryId}`);
+        
+        // Remove from local array
+        allQueries = allQueries.filter(q => q.id !== queryId);
+        
+        // Update display
+        updateStats();
+        displayQueries(allQueries);
+        
+      } catch (error) {
+        console.error('❌ Error deleting query:', error);
+        alert(`Error deleting query: ${error.message}`);
+        
+        // Re-enable button on error
+        const row = document.querySelector(`tr[data-id="${queryId}"]`);
+        if (row) {
+          const deleteBtn = row.querySelector('.delete-btn');
+          deleteBtn.disabled = false;
+          deleteBtn.textContent = '🗑️ Delete';
+        }
+      }
+    }
+
+    // Make deleteQuery global
+    window.deleteQuery = deleteQuery;
 
     // Update statistics
     function updateStats() {

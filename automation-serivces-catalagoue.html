@@ -1308,5 +1308,94 @@
             });
         });
     </script>
+  
+  <!-- Chatbot Widget Start -->
+<!-- Use your provided CSS -->
+<style>
+/* PASTE ALL YOUR CSS HERE */
+</style>
+
+<!-- Chatbot HTML -->
+<button class="chatbot-toggle" title="Chat with AI Assistant">💬</button>
+
+<div class="chatbot-container" id="chatbotContainer">
+    <div class="chatbot-header">
+        <h3>💬 AI Assistant</h3>
+        <button class="chatbot-close" onclick="toggleChatbot()">×</button>
+    </div>
+    <div class="chatbot-messages" id="chatbotMessages">
+        <div class="message bot">Hello! 👋 I’m your AI assistant. How can I help you today?</div>
+    </div>
+    <div class="chatbot-input-area">
+        <input type="text" class="chatbot-input" id="chatbotInput" placeholder="Type a message..."/>
+        <button class="chatbot-send" id="chatbotSend">➤</button>
+    </div>
+</div>
+
+<script>
+const toggleBtn = document.querySelector('.chatbot-toggle');
+const chatContainer = document.getElementById('chatbotContainer');
+const closeBtn = document.querySelector('.chatbot-close');
+const sendBtn = document.getElementById('chatbotSend');
+const inputField = document.getElementById('chatbotInput');
+const messagesContainer = document.getElementById('chatbotMessages');
+
+// Make toggle function global so the inline onclick works
+function toggleChatbot() {
+    chatContainer.classList.toggle('active');
+}
+
+// Event listeners
+toggleBtn.addEventListener('click', toggleChatbot);
+closeBtn.addEventListener('click', toggleChatbot);
+
+// Append message
+function appendMessage(content, sender) {
+    const div = document.createElement('div');
+    div.classList.add('message', sender);
+    div.textContent = content;
+    messagesContainer.appendChild(div);
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+}
+
+// Send message
+async function sendMessage() {
+    const text = inputField.value.trim();
+    if (!text) return;
+    appendMessage(text, 'user');
+    inputField.value = '';
+
+    const typingDiv = document.createElement('div');
+    typingDiv.classList.add('typing-indicator');
+    typingDiv.innerHTML = '<div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div>';
+    messagesContainer.appendChild(typingDiv);
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+    try {
+        const res = await fetch('https://zsnapypro.app.n8n.cloud/webhook/f8bc41a5-c63b-49bc-8d12-5b92354d809f', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: text })
+        });
+        const rawData = await res.text();
+        typingDiv.remove();
+        try {
+            const data = JSON.parse(rawData);
+            appendMessage(data.reply || rawData, 'bot');
+        } catch {
+            appendMessage(rawData || '⚠️ No response from server.', 'bot');
+        }
+    } catch {
+        typingDiv.remove();
+        appendMessage('❌ Error: Unable to connect to server.', 'bot');
+    }
+}
+
+sendBtn.addEventListener('click', sendMessage);
+inputField.addEventListener('keypress', e => { if(e.key === 'Enter') sendMessage(); });
+</script>
+
+
+  
 </body>
 </html>

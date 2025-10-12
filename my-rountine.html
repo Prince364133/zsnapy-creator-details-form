@@ -1,0 +1,1231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Routine Manager</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.22.0/firebase-app-compat.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.22.0/firebase-firestore-compat.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 10px;
+            transition: all 0.3s;
+        }
+
+        body.dark-mode {
+            background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+            color: #e0e0e0;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+            padding: 0 10px;
+        }
+
+        h1 {
+            font-size: clamp(1.5rem, 5vw, 2.5rem);
+            color: white;
+            flex: 1;
+            text-align: center;
+            font-weight: 700;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+            min-width: 200px;
+        }
+
+        .controls {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .control-btn {
+            padding: 10px 18px;
+            background: rgba(255, 255, 255, 0.25);
+            backdrop-filter: blur(10px);
+            color: white;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: clamp(0.85rem, 2vw, 1rem);
+            transition: all 0.3s;
+            font-weight: 600;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .control-btn:hover {
+            background: rgba(255, 255, 255, 0.35);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+        }
+
+        .stats-bar {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            padding: 0 10px;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 15px 25px;
+            text-align: center;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            min-width: 120px;
+            transition: all 0.3s;
+        }
+
+        body.dark-mode .stat-card {
+            background: rgba(15, 12, 41, 0.8);
+            backdrop-filter: blur(10px);
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 30px rgba(0,0,0,0.15);
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        body.dark-mode .stat-label {
+            color: #aaa;
+        }
+
+        .search-container {
+            max-width: 500px;
+            margin: 0 auto 20px;
+            padding: 0 10px;
+        }
+
+        .search-box {
+            width: 100%;
+            padding: 12px 20px;
+            border-radius: 25px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            color: white;
+            font-size: 1rem;
+            transition: all 0.3s;
+        }
+
+        .search-box::placeholder {
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .search-box:focus {
+            outline: none;
+            background: rgba(255, 255, 255, 0.3);
+            border-color: rgba(255, 255, 255, 0.5);
+        }
+
+        .filter-bar {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            padding: 0 10px;
+        }
+
+        .filter-btn {
+            padding: 8px 16px;
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            color: white;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s;
+            font-weight: 500;
+        }
+
+        .filter-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .filter-btn.active {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            border-color: transparent;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 50px;
+            font-size: 1.5rem;
+            color: white;
+        }
+
+        .spinner {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top: 4px solid white;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .table-container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 25px;
+            padding: clamp(15px, 3vw, 25px);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+            overflow-x: auto;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        body.dark-mode .table-container {
+            background: rgba(15, 12, 41, 0.85);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        .routine-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: clamp(5px, 1vw, 10px);
+            min-width: 700px;
+        }
+
+        .routine-table th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: clamp(10px, 2vw, 15px);
+            border-radius: 12px;
+            font-weight: 600;
+            text-align: center;
+            font-size: clamp(0.8rem, 1.5vw, 1rem);
+            white-space: nowrap;
+        }
+
+        .routine-table td:first-child {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            font-weight: 600;
+            text-align: center;
+            border-radius: 12px;
+            padding: clamp(10px, 2vw, 15px);
+            font-size: clamp(0.85rem, 1.5vw, 1rem);
+            white-space: nowrap;
+        }
+
+        .slot-cell {
+            background: rgba(248, 249, 250, 0.8);
+            border-radius: 12px;
+            padding: clamp(15px, 3vw, 20px);
+            min-height: clamp(70px, 10vw, 90px);
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+            border: 2px solid transparent;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        body.dark-mode .slot-cell {
+            background: rgba(26, 26, 46, 0.6);
+            color: #e0e0e0;
+        }
+
+        .slot-cell:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+            border-color: #667eea;
+        }
+
+        .slot-cell.has-content {
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+        }
+
+        body.dark-mode .slot-cell.has-content {
+            background: linear-gradient(135deg, #2c5364 0%, #203a43 100%);
+        }
+
+        .slot-count {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 50%;
+            width: clamp(22px, 4vw, 28px);
+            height: clamp(22px, 4vw, 28px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: clamp(0.75rem, 1.5vw, 0.9rem);
+            font-weight: bold;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+
+        .add-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: clamp(55px, 12vw, 70px);
+            height: clamp(55px, 12vw, 70px);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            font-size: clamp(1.5rem, 4vw, 2.2rem);
+            cursor: pointer;
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+            transition: all 0.3s;
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .add-btn:hover {
+            transform: scale(1.15) rotate(90deg);
+            box-shadow: 0 12px 35px rgba(102, 126, 234, 0.6);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 25px;
+            padding: clamp(20px, 5vw, 35px);
+            max-width: 650px;
+            width: calc(100% - 40px);
+            max-height: 90vh;
+            overflow-y: auto;
+            position: relative;
+            animation: slideIn 0.3s;
+            box-shadow: 0 25px 60px rgba(0,0,0,0.3);
+        }
+
+        body.dark-mode .modal-content {
+            background: linear-gradient(135deg, #0f0c29 0%, #302b63 100%);
+            color: #e0e0e0;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateY(-50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #666;
+            transition: color 0.3s;
+        }
+
+        .close-btn:hover {
+            color: #e74c3c;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #2c3e50;
+            font-size: clamp(0.9rem, 2vw, 1rem);
+        }
+
+        body.dark-mode .form-group label {
+            color: #e0e0e0;
+        }
+
+        .form-group select,
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: clamp(10px, 2vw, 14px);
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            font-size: clamp(0.9rem, 2vw, 1rem);
+            transition: all 0.3s;
+            font-family: inherit;
+        }
+
+        body.dark-mode .form-group select,
+        body.dark-mode .form-group input,
+        body.dark-mode .form-group textarea {
+            background: rgba(26, 26, 46, 0.6);
+            color: #e0e0e0;
+            border-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .form-group select:focus,
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .sub-slot {
+            background: rgba(248, 249, 250, 0.5);
+            border-radius: 15px;
+            padding: clamp(12px, 3vw, 18px);
+            margin-bottom: 15px;
+            position: relative;
+            border: 2px solid rgba(102, 126, 234, 0.1);
+            transition: all 0.3s;
+        }
+
+        .sub-slot:hover {
+            border-color: rgba(102, 126, 234, 0.3);
+            transform: translateX(5px);
+        }
+
+        body.dark-mode .sub-slot {
+            background: rgba(26, 26, 46, 0.4);
+            border-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .sub-slot-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .remove-sub-slot {
+            background: #e74c3c;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+
+        .add-sub-slot-btn {
+            width: 100%;
+            padding: 12px;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 1rem;
+            margin-top: 10px;
+            transition: all 0.3s;
+        }
+
+        .add-sub-slot-btn:hover {
+            background: #2980b9;
+        }
+
+        .add-sub-slot-btn:disabled {
+            background: #95a5a6;
+            cursor: not-allowed;
+        }
+
+        .save-btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-top: 20px;
+            transition: all 0.3s;
+        }
+
+        .save-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        .view-modal .sub-slot-item {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-left: 4px solid #667eea;
+        }
+
+        body.dark-mode .view-modal .sub-slot-item {
+            background: rgba(26, 26, 46, 0.6);
+        }
+
+        .sub-slot-item h4 {
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+
+        .sub-slot-item .time {
+            color: #3498db;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .edit-btn, .delete-btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .edit-btn {
+            background: #3498db;
+            color: white;
+        }
+
+        .edit-btn:hover {
+            background: #2980b9;
+        }
+
+        .delete-btn {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .delete-btn:hover {
+            background: #c0392b;
+        }
+
+        .time-picker-group {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .time-picker-group input {
+            flex: 1;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 5px;
+            }
+
+            h1 {
+                font-size: 1.5rem;
+                min-width: auto;
+            }
+
+            .header {
+                flex-direction: column;
+                gap: 10px;
+                margin-bottom: 15px;
+            }
+
+            .controls {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .control-btn {
+                flex: 1;
+                min-width: 100px;
+            }
+
+            .stats-bar {
+                gap: 8px;
+            }
+
+            .stat-card {
+                flex: 1;
+                min-width: 100px;
+                padding: 12px 15px;
+            }
+
+            .stat-number {
+                font-size: 1.5rem;
+            }
+
+            .stat-label {
+                font-size: 0.8rem;
+            }
+
+            .table-container {
+                padding: 10px;
+                border-radius: 20px;
+            }
+
+            .routine-table {
+                border-spacing: 5px;
+                min-width: 600px;
+            }
+
+            .routine-table th,
+            .routine-table td:first-child {
+                padding: 8px;
+                font-size: 0.75rem;
+            }
+
+            .slot-cell {
+                padding: 10px;
+                min-height: 60px;
+            }
+
+            .slot-count {
+                width: 20px;
+                height: 20px;
+                font-size: 0.7rem;
+                top: 5px;
+                right: 5px;
+            }
+
+            .add-btn {
+                width: 55px;
+                height: 55px;
+                font-size: 1.5rem;
+                bottom: 15px;
+                right: 15px;
+            }
+
+            .modal-content {
+                padding: 20px;
+                width: calc(100% - 20px);
+            }
+
+            .modal-content h2 {
+                font-size: 1.3rem;
+            }
+
+            .filter-bar {
+                gap: 5px;
+            }
+
+            .filter-btn {
+                padding: 6px 12px;
+                font-size: 0.8rem;
+            }
+
+            .search-box {
+                padding: 10px 15px;
+                font-size: 0.9rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div></div>
+        <h1>📅 My Routine Manager</h1>
+        <div class="controls">
+            <button class="control-btn" onclick="speakTodaysSchedule()">🔊 Speak</button>
+            <button class="control-btn" onclick="exportRoutines()">💾 Export</button>
+            <button class="control-btn" onclick="toggleDarkMode()">🌙 Dark</button>
+        </div>
+    </div>
+
+    <div class="stats-bar">
+        <div class="stat-card">
+            <div class="stat-number" id="totalRoutines">0</div>
+            <div class="stat-label">Total Routines</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number" id="todayRoutines">0</div>
+            <div class="stat-label">Today's Tasks</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number" id="completionRate">0%</div>
+            <div class="stat-label">This Week</div>
+        </div>
+    </div>
+
+    <div class="search-container">
+        <input type="text" class="search-box" placeholder="🔍 Search routines..." oninput="searchRoutines(this.value)">
+    </div>
+
+    <div class="filter-bar">
+        <button class="filter-btn active" onclick="filterByDay('all')">All Days</button>
+        <button class="filter-btn" onclick="filterByDay('today')">Today</button>
+        <button class="filter-btn" onclick="filterByDay('weekdays')">Weekdays</button>
+        <button class="filter-btn" onclick="filterByDay('weekend')">Weekend</button>
+    </div>
+
+    <div id="loading" class="loading">
+        <div class="spinner"></div>
+        <p>Loading your routines...</p>
+    </div>
+
+    <div class="table-container" id="tableContainer" style="display: none;">
+        <table class="routine-table">
+            <thead>
+                <tr>
+                    <th>Day</th>
+                    <th>6-9 AM</th>
+                    <th>9-12 PM</th>
+                    <th>12-7 PM</th>
+                    <th>7-10 PM</th>
+                    <th>10-12 AM</th>
+                </tr>
+            </thead>
+            <tbody id="routineTableBody"></tbody>
+        </table>
+    </div>
+
+    <button class="add-btn" onclick="openAddModal()">➕</button>
+
+    <div id="addModal" class="modal">
+        <div class="modal-content">
+            <button class="close-btn" onclick="closeAddModal()">✕</button>
+            <h2>Add New Routine</h2>
+            <form id="addRoutineForm" onsubmit="saveRoutine(event)">
+                <div class="form-group">
+                    <label>Select Day</label>
+                    <select id="daySelect" required>
+                        <option value="">Choose a day</option>
+                        <option value="Monday">Monday</option>
+                        <option value="Tuesday">Tuesday</option>
+                        <option value="Wednesday">Wednesday</option>
+                        <option value="Thursday">Thursday</option>
+                        <option value="Friday">Friday</option>
+                        <option value="Saturday">Saturday</option>
+                        <option value="Sunday">Sunday</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Select Main Slot</label>
+                    <select id="slotSelect" required onchange="updateSubSlotLimit()">
+                        <option value="">Choose a time slot</option>
+                        <option value="6-9">6-9 AM</option>
+                        <option value="9-12">9-12 PM</option>
+                        <option value="12-7">12-7 PM</option>
+                        <option value="7-10">7-10 PM</option>
+                        <option value="10-12">10-12 AM</option>
+                    </select>
+                </div>
+                <div id="subSlotsContainer"></div>
+                <button type="button" class="add-sub-slot-btn" onclick="addSubSlot()" id="addSubSlotBtn" disabled>+ Add Sub-Slot</button>
+                <button type="submit" class="save-btn">Save Routine</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="viewModal" class="modal view-modal">
+        <div class="modal-content">
+            <button class="close-btn" onclick="closeViewModal()">✕</button>
+            <h2 id="viewModalTitle">Routine Details</h2>
+            <div id="viewModalContent"></div>
+        </div>
+    </div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyAzoGp2rt4CB9e5yazdlK-0G28Dp7TbXtQ",
+            authDomain: "zsnapypro-d9d22.firebaseapp.com",
+            projectId: "zsnapypro-d9d22",
+            storageBucket: "zsnapypro-d9d22.firebasestorage.app",
+            messagingSenderId: "614389089654",
+            appId: "1:614389089654:web:3be959a33862ea06146657",
+            measurementId: "G-EQCMCF2F3P"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+        const slots = ['6-9', '9-12', '12-7', '7-10', '10-12'];
+        const slotLimits = { '6-9': 4, '9-12': 3, '12-7': 4, '7-10': 3, '10-12': 2 };
+        
+        let routines = {};
+        let subSlotCount = 0;
+        let currentEditId = null;
+        let currentFilter = 'all';
+        let searchQuery = '';
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadRoutines();
+            checkDarkMode();
+            loadCache();
+        });
+
+        function toggleDarkMode() {
+            document.body.classList.toggle('dark-mode');
+            const isDark = document.body.classList.contains('dark-mode');
+            localStorage.setItem('darkMode', isDark);
+            event.target.textContent = isDark ? '☀️ Light' : '🌙 Dark';
+        }
+
+        function checkDarkMode() {
+            const isDark = localStorage.getItem('darkMode') === 'true';
+            if (isDark) {
+                document.body.classList.add('dark-mode');
+                const btns = document.querySelectorAll('.control-btn');
+                btns.forEach(btn => {
+                    if (btn.textContent.includes('Dark')) {
+                        btn.textContent = '☀️ Light';
+                    }
+                });
+            }
+        }
+
+        async function loadRoutines() {
+            try {
+                const snapshot = await db.collection('routines').get();
+                routines = {};
+                
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    const key = data.day + '-' + data.mainSlot;
+                    routines[key] = { id: doc.id, ...data };
+                });
+
+                saveCache();
+                renderTable();
+                
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('tableContainer').style.display = 'block';
+                updateStats();
+            } catch (error) {
+                console.error('Error loading routines:', error);
+                alert('Failed to load routines. Please refresh the page.');
+            }
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('routineTableBody');
+            tbody.innerHTML = '';
+
+            let visibleDays = days;
+            const today = new Date().toLocaleDateString('en-US', { weekday: 'long' });
+
+            if (currentFilter === 'today') {
+                visibleDays = [today];
+            } else if (currentFilter === 'weekdays') {
+                visibleDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+            } else if (currentFilter === 'weekend') {
+                visibleDays = ['Saturday', 'Sunday'];
+            }
+
+            visibleDays.forEach(day => {
+                const row = document.createElement('tr');
+                
+                const dayCell = document.createElement('td');
+                dayCell.textContent = day;
+                row.appendChild(dayCell);
+
+                slots.forEach(slot => {
+                    const cell = document.createElement('td');
+                    const slotCell = document.createElement('div');
+                    slotCell.className = 'slot-cell';
+                    
+                    const key = day + '-' + slot;
+                    if (routines[key]) {
+                        if (searchQuery) {
+                            const hasMatch = routines[key].subSlots.some(sub => 
+                                sub.title.toLowerCase().includes(searchQuery) ||
+                                sub.description.toLowerCase().includes(searchQuery)
+                            );
+                            if (!hasMatch) {
+                                cell.appendChild(slotCell);
+                                row.appendChild(cell);
+                                return;
+                            }
+                        }
+                        
+                        slotCell.classList.add('has-content');
+                        const count = routines[key].subSlots.length;
+                        slotCell.innerHTML = '<span class="slot-count">' + count + '</span>';
+                    }
+                    
+                    slotCell.onclick = function() { viewSlot(day, slot); };
+                    cell.appendChild(slotCell);
+                    row.appendChild(cell);
+                });
+
+                tbody.appendChild(row);
+            });
+
+            updateStats();
+        }
+
+        function updateStats() {
+            const total = Object.keys(routines).length;
+            document.getElementById('totalRoutines').textContent = total;
+
+            const today = new Date().toLocaleDateString('en-US', { weekday: 'long' });
+            let todayCount = 0;
+            slots.forEach(slot => {
+                const key = today + '-' + slot;
+                if (routines[key]) {
+                    todayCount += routines[key].subSlots.length;
+                }
+            });
+            document.getElementById('todayRoutines').textContent = todayCount;
+
+            const totalSlots = days.length * slots.length;
+            const filledSlots = Object.keys(routines).length;
+            const completion = Math.round((filledSlots / totalSlots) * 100);
+            document.getElementById('completionRate').textContent = completion + '%';
+        }
+
+        function filterByDay(filter) {
+            currentFilter = filter;
+            
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            renderTable();
+        }
+
+        function searchRoutines(query) {
+            searchQuery = query.toLowerCase();
+            renderTable();
+        }
+
+        function exportRoutines() {
+            const data = JSON.stringify(routines, null, 2);
+            const blob = new Blob([data], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'routine-manager-' + new Date().toISOString().split('T')[0] + '.json';
+            a.click();
+            URL.revokeObjectURL(url);
+            alert('Routines exported successfully! 💾');
+        }
+
+        function speakTodaysSchedule() {
+            const today = new Date().toLocaleDateString('en-US', { weekday: 'long' });
+            let schedule = 'Today is ' + today + '. Here is your schedule: ';
+
+            let hasSchedule = false;
+            slots.forEach(slot => {
+                const key = today + '-' + slot;
+                if (routines[key]) {
+                    hasSchedule = true;
+                    schedule += 'From ' + slot + ', ';
+                    routines[key].subSlots.forEach(subSlot => {
+                        schedule += subSlot.time + ', ' + subSlot.title + '. ';
+                    });
+                }
+            });
+
+            if (!hasSchedule) {
+                schedule = 'You have no scheduled activities for today, ' + today + '.';
+            }
+
+            if ('speechSynthesis' in window) {
+                const utterance = new SpeechSynthesisUtterance(schedule);
+                speechSynthesis.speak(utterance);
+            } else {
+                alert(schedule);
+            }
+        }
+
+        function openAddModal() {
+            document.getElementById('addModal').classList.add('active');
+            document.getElementById('addRoutineForm').reset();
+            document.getElementById('subSlotsContainer').innerHTML = '';
+            subSlotCount = 0;
+            currentEditId = null;
+            document.getElementById('addSubSlotBtn').disabled = true;
+        }
+
+        function closeAddModal() {
+            document.getElementById('addModal').classList.remove('active');
+        }
+
+        function closeViewModal() {
+            document.getElementById('viewModal').classList.remove('active');
+        }
+
+        function updateSubSlotLimit() {
+            document.getElementById('addSubSlotBtn').disabled = false;
+            subSlotCount = 0;
+            document.getElementById('subSlotsContainer').innerHTML = '';
+        }
+
+        function addSubSlot() {
+            const slot = document.getElementById('slotSelect').value;
+            if (!slot) return;
+
+            const limit = slotLimits[slot];
+            if (subSlotCount >= limit) {
+                alert('Maximum ' + limit + ' sub-slots allowed for this time slot.');
+                return;
+            }
+
+            subSlotCount++;
+            const container = document.getElementById('subSlotsContainer');
+            const subSlotDiv = document.createElement('div');
+            subSlotDiv.className = 'sub-slot';
+            subSlotDiv.innerHTML = '<div class="sub-slot-header"><strong>Sub-Slot ' + subSlotCount + '</strong><button type="button" class="remove-sub-slot" onclick="removeSubSlot(this)">Remove</button></div><div class="form-group"><label>Time Range</label><div class="time-picker-group"><input type="time" class="sub-slot-time-start" required><span style="font-weight: bold;">to</span><input type="time" class="sub-slot-time-end" required></div></div><div class="form-group"><label>Title</label><input type="text" class="sub-slot-title" placeholder="Activity title" required></div><div class="form-group"><label>Description</label><textarea class="sub-slot-desc" placeholder="Activity description" rows="3" required></textarea></div>';
+            container.appendChild(subSlotDiv);
+
+            if (subSlotCount >= limit) {
+                document.getElementById('addSubSlotBtn').disabled = true;
+            }
+        }
+
+        function removeSubSlot(btn) {
+            btn.closest('.sub-slot').remove();
+            subSlotCount--;
+            const slot = document.getElementById('slotSelect').value;
+            if (slot && subSlotCount < slotLimits[slot]) {
+                document.getElementById('addSubSlotBtn').disabled = false;
+            }
+        }
+
+        async function saveRoutine(event) {
+            event.preventDefault();
+
+            const day = document.getElementById('daySelect').value;
+            const mainSlot = document.getElementById('slotSelect').value;
+            
+            const subSlotDivs = document.querySelectorAll('.sub-slot');
+            if (subSlotDivs.length === 0) {
+                alert('Please add at least one sub-slot.');
+                return;
+            }
+
+            const subSlots = [];
+            try {
+                subSlotDivs.forEach(div => {
+                    const startTime = div.querySelector('.sub-slot-time-start').value;
+                    const endTime = div.querySelector('.sub-slot-time-end').value;
+                    
+                    if (startTime >= endTime) {
+                        throw new Error('End time must be after start time!');
+                    }
+                    
+                    subSlots.push({
+                        time: formatTime(startTime) + ' - ' + formatTime(endTime),
+                        title: div.querySelector('.sub-slot-title').value,
+                        description: div.querySelector('.sub-slot-desc').value
+                    });
+                });
+            } catch (error) {
+                alert(error.message);
+                return;
+            }
+
+            const routineData = { day: day, mainSlot: mainSlot, subSlots: subSlots };
+
+            try {
+                const key = day + '-' + mainSlot;
+                
+                if (currentEditId) {
+                    await db.collection('routines').doc(currentEditId).update(routineData);
+                } else if (routines[key]) {
+                    await db.collection('routines').doc(routines[key].id).update(routineData);
+                } else {
+                    await db.collection('routines').add(routineData);
+                }
+
+                closeAddModal();
+                loadRoutines();
+                alert('Routine saved successfully!');
+            } catch (error) {
+                console.error('Error saving routine:', error);
+                alert('Failed to save routine. Please try again.');
+            }
+        }
+
+        function viewSlot(day, slot) {
+            const key = day + '-' + slot;
+            const modal = document.getElementById('viewModal');
+            const title = document.getElementById('viewModalTitle');
+            const content = document.getElementById('viewModalContent');
+
+            title.textContent = day + ' - ' + slot;
+
+            if (routines[key]) {
+                const routine = routines[key];
+                let html = '';
+                routine.subSlots.forEach(function(subSlot) {
+                    html += '<div class="sub-slot-item"><h4>' + subSlot.title + '</h4><div class="time">⏰ ' + subSlot.time + '</div><p>' + subSlot.description + '</p></div>';
+                });
+                html += '<div class="action-buttons"><button class="edit-btn" onclick="editRoutine(\'' + key + '\')">Edit</button><button class="delete-btn" onclick="deleteRoutine(\'' + key + '\')">Delete</button></div>';
+                content.innerHTML = html;
+            } else {
+                content.innerHTML = '<p>No routine scheduled for this slot. Click the + button to add one!</p>';
+            }
+
+            modal.classList.add('active');
+        }
+
+        function editRoutine(key) {
+            const routine = routines[key];
+            currentEditId = routine.id;
+
+            document.getElementById('daySelect').value = routine.day;
+            document.getElementById('slotSelect').value = routine.mainSlot;
+            
+            closeViewModal();
+            openAddModal();
+            
+            updateSubSlotLimit();
+            
+            routine.subSlots.forEach(function(subSlot) {
+                addSubSlot();
+                const lastSubSlot = document.querySelector('.sub-slot:last-child');
+                
+                const timeStr = subSlot.time;
+                let startTime = '';
+                let endTime = '';
+                
+                if (timeStr.includes(' - ')) {
+                    const parts = timeStr.split(' - ');
+                    startTime = convertTo24Hour(parts[0].trim());
+                    endTime = convertTo24Hour(parts[1].trim());
+                } else if (timeStr.includes('-')) {
+                    const parts = timeStr.split('-');
+                    startTime = parts[0].trim().padStart(2, '0') + ':00';
+                    endTime = parts[1].trim().padStart(2, '0') + ':00';
+                }
+                
+                lastSubSlot.querySelector('.sub-slot-time-start').value = startTime;
+                lastSubSlot.querySelector('.sub-slot-time-end').value = endTime;
+                lastSubSlot.querySelector('.sub-slot-title').value = subSlot.title;
+                lastSubSlot.querySelector('.sub-slot-desc').value = subSlot.description;
+            });
+        }
+
+        function formatTime(time24) {
+            const parts = time24.split(':');
+            const hours = parseInt(parts[0]);
+            const minutes = parts[1];
+            const ampm = hours >= 12 ? 'PM' : 'AM';
+            const hour12 = hours % 12 || 12;
+            return hour12 + ':' + minutes + ' ' + ampm;
+        }
+
+        function convertTo24Hour(time12) {
+            const match = time12.match(/(\d+):(\d+)\s*(AM|PM)/i);
+            if (!match) return time12;
+            
+            let hours = parseInt(match[1]);
+            const minutes = match[2];
+            const period = match[3];
+            
+            if (period.toUpperCase() === 'PM' && hours !== 12) {
+                hours += 12;
+            } else if (period.toUpperCase() === 'AM' && hours === 12) {
+                hours = 0;
+            }
+            
+            return hours.toString().padStart(2, '0') + ':' + minutes;
+        }
+
+        async function deleteRoutine(key) {
+            if (!confirm('Are you sure you want to delete this routine?')) return;
+
+            try {
+                await db.collection('routines').doc(routines[key].id).delete();
+                closeViewModal();
+                loadRoutines();
+                alert('Routine deleted successfully!');
+            } catch (error) {
+                console.error('Error deleting routine:', error);
+                alert('Failed to delete routine. Please try again.');
+            }
+        }
+
+        function saveCache() {
+            localStorage.setItem('routinesCache', JSON.stringify(routines));
+            localStorage.setItem('cacheTime', Date.now());
+        }
+
+        function loadCache() {
+            const cache = localStorage.getItem('routinesCache');
+            const cacheTime = localStorage.getItem('cacheTime');
+            
+            if (cache && cacheTime) {
+                const hoursPassed = (Date.now() - parseInt(cacheTime)) / (1000 * 60 * 60);
+                if (hoursPassed < 24) {
+                    routines = JSON.parse(cache);
+                    renderTable();
+                }
+            }
+        }
+
+        document.getElementById('addModal').addEventListener('click', function(e) {
+            if (e.target.id === 'addModal') closeAddModal();
+        });
+
+        document.getElementById('viewModal').addEventListener('click', function(e) {
+            if (e.target.id === 'viewModal') closeViewModal();
+        });
+    </script>
+</body>
+</html>

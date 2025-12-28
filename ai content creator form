@@ -1,0 +1,417 @@
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Contact Form - Infusion</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #000000;
+      color: #ffffff;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+
+    .form-container {
+      background: #111111;
+      border: 1px solid #333333;
+      padding: 40px;
+      border-radius: 12px;
+      width: 100%;
+      max-width: 500px;
+      box-shadow: 
+        0 10px 30px rgba(0, 0, 0, 0.5),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+      position: relative;
+    }
+
+    @keyframes rotate {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .form-content {
+      position: relative;
+      z-index: 1;
+    }
+
+    h2 {
+      text-align: center;
+      margin-bottom: 30px;
+      font-size: 2.2em;
+      color: #ffffff;
+      font-weight: 700;
+      letter-spacing: 2px;
+    }
+
+    .form-group {
+      margin-bottom: 25px;
+      position: relative;
+    }
+
+    input, textarea {
+      width: 100%;
+      padding: 15px 20px;
+      background: #222222;
+      border: 2px solid #333333;
+      border-radius: 8px;
+      color: #ffffff;
+      font-size: 16px;
+      transition: all 0.3s ease;
+    }
+
+    input:focus, textarea:focus {
+      outline: none;
+      border-color: #ffffff;
+      background: #2a2a2a;
+      box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.1);
+    }
+
+    input::placeholder, textarea::placeholder {
+      color: #888888;
+    }
+
+    input:focus::placeholder, textarea:focus::placeholder {
+      color: #aaaaaa;
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 120px;
+    }
+
+    .submit-btn {
+      width: 100%;
+      padding: 15px;
+      background: #ffffff;
+      border: none;
+      border-radius: 8px;
+      color: #000000;
+      font-size: 18px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .submit-btn:hover {
+      background: #f0f0f0;
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    }
+
+    .submit-btn:disabled {
+      background: #555555;
+      color: #999999;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .status {
+      margin-top: 20px;
+      padding: 15px;
+      border-radius: 10px;
+      text-align: center;
+      font-weight: 600;
+      min-height: 50px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.3s ease;
+    }
+
+    .status.success {
+      background: #1a2e1a;
+      border: 2px solid #4caf50;
+      color: #4caf50;
+    }
+
+    .status.error {
+      background: #2e1a1a;
+      border: 2px solid #f44336;
+      color: #f44336;
+    }
+
+    .status.loading {
+      background: #1a1a2e;
+      border: 2px solid #ffffff;
+      color: #ffffff;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.02); opacity: 0.9; }
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-5px); }
+      75% { transform: translateX(5px); }
+    }
+
+    .loader {
+      width: 24px;
+      height: 24px;
+      border: 3px solid #333333;
+      border-top: 3px solid #ffffff;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-right: 10px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .debug {
+      margin-top: 25px;
+      padding: 15px;
+      background: #1a1a1a;
+      border-radius: 8px;
+      font-size: 12px;
+      color: #cccccc;
+      border: 1px solid #333333;
+      word-break: break-all;
+      font-family: 'Courier New', monospace;
+    }
+
+    .connection-indicator {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #f44336;
+      transition: background 0.3s ease;
+    }
+
+    .connection-indicator.connected {
+      background: #4caf50;
+      box-shadow: 0 0 10px rgba(76, 175, 80, 0.5);
+    }
+
+    @media (max-width: 600px) {
+      .form-container {
+        padding: 30px 20px;
+        margin: 10px;
+      }
+      
+      h2 {
+        font-size: 1.8em;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div class="form-container">
+  <div class="connection-indicator" id="connectionIndicator"></div>
+  
+  <div class="form-content">
+    <h2>Contact Us</h2>
+    
+    <form id="contactForm">
+      <div class="form-group">
+        <input type="text" id="name" placeholder="Your Full Name" required>
+      </div>
+      
+      <div class="form-group">
+        <input type="email" id="email" placeholder="Your Email Address" required>
+      </div>
+      
+      <div class="form-group">
+        <input type="text" id="subject" placeholder="Subject" required>
+      </div>
+      
+      <div class="form-group">
+        <textarea id="message" placeholder="Your Message" required></textarea>
+      </div>
+      
+      <button type="submit" id="submitBtn" class="submit-btn">
+        Send Message
+      </button>
+    </form>
+    
+    <div class="status" id="statusMsg" style="display: none;"></div>
+    <div class="debug" id="debugInfo">Initializing Firebase...</div>
+  </div>
+</div>
+
+<!-- Firebase SDK v9 with fallback -->
+<script type="module">
+  import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js';
+  import { getDatabase, ref, push, serverTimestamp, onValue } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js';
+
+  // Firebase configuration
+  const firebaseConfig = {
+    apiKey: "AIzaSyAzoGp2rt4CB9e5yazdlK-0G28Dp7TbXtQ",
+    authDomain: "zsnapypro-d9d22.firebaseapp.com",
+    databaseURL: "https://zsnapypro-d9d22-default-rtdb.firebaseio.com/",
+    projectId: "zsnapypro-d9d22",
+    storageBucket: "zsnapypro-d9d22.firebasestorage.app",
+    messagingSenderId: "614389089654",
+    appId: "1:614389089654:web:b4e8d502a8c0e996146657",
+    measurementId: "G-7EVYDYL4GX"
+  };
+
+  // Global variables
+  let database;
+  const debugInfo = document.getElementById('debugInfo');
+  const statusMsg = document.getElementById('statusMsg');
+  const connectionIndicator = document.getElementById('connectionIndicator');
+
+  // Initialize Firebase
+  async function initializeFirebase() {
+    try {
+      debugInfo.textContent = 'Connecting to Firebase...';
+      
+      const app = initializeApp(firebaseConfig);
+      database = getDatabase(app);
+      
+      debugInfo.textContent = 'Firebase initialized successfully';
+      
+      // Monitor connection
+      const connectedRef = ref(database, '.info/connected');
+      onValue(connectedRef, (snapshot) => {
+        if (snapshot.val() === true) {
+          debugInfo.textContent = '✅ Connected to Firebase';
+          debugInfo.style.color = '#4caf50';
+          connectionIndicator.classList.add('connected');
+        } else {
+          debugInfo.textContent = '❌ Disconnected from Firebase';
+          debugInfo.style.color = '#f44336';
+          connectionIndicator.classList.remove('connected');
+        }
+      });
+      
+    } catch (error) {
+      debugInfo.textContent = `❌ Firebase Error: ${error.message}`;
+      debugInfo.style.color = '#f44336';
+      console.error('Firebase initialization error:', error);
+    }
+  }
+
+  // Form submission handler
+  function handleFormSubmit(e) {
+    e.preventDefault();
+    
+    if (!database) {
+      showStatus('❌ Firebase not ready. Please wait...', 'error');
+      return;
+    }
+    
+    const submitBtn = document.getElementById('submitBtn');
+    const formData = {
+      name: document.getElementById('name').value.trim(),
+      email: document.getElementById('email').value.trim(),
+      subject: document.getElementById('subject').value.trim(),
+      message: document.getElementById('message').value.trim()
+    };
+    
+    // Validation
+    if (!formData.name || !formData.email || !formData.subject || !formData.message) {
+      showStatus('❌ Please fill in all fields', 'error');
+      return;
+    }
+    
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      showStatus('❌ Please enter a valid email address', 'error');
+      return;
+    }
+    
+    // Show loading state
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Sending...';
+    showStatus('<div class="loader"></div>Sending your message...', 'loading');
+    
+    // Prepare data for Firebase
+    const contactData = {
+      ...formData,
+      timestamp: serverTimestamp(),
+      submittedAt: new Date().toISOString(),
+      userAgent: navigator.userAgent,
+      ip: 'client-side' // You'd need a service to get real IP
+    };
+    
+    // Send to Firebase
+    const queriesRef = ref(database, 'queries');
+    push(queriesRef, contactData)
+      .then(() => {
+        showStatus('✅ Message sent successfully!', 'success');
+        document.getElementById('contactForm').reset();
+        debugInfo.textContent = '✅ Message delivered to database';
+        debugInfo.style.color = '#4caf50';
+      })
+      .catch((error) => {
+        console.error('Database Error:', error);
+        showStatus(`❌ Error: ${error.message}`, 'error');
+        debugInfo.textContent = `❌ Database Error: ${error.code} - ${error.message}`;
+        debugInfo.style.color = '#f44336';
+      })
+      .finally(() => {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Send Message';
+      });
+  }
+
+  // Show status message
+  function showStatus(message, type) {
+    statusMsg.innerHTML = message;
+    statusMsg.className = `status ${type}`;
+    statusMsg.style.display = 'flex';
+    
+    if (type === 'success') {
+      setTimeout(() => {
+        statusMsg.style.display = 'none';
+      }, 5000);
+    }
+  }
+
+  // Initialize when DOM is loaded
+  document.addEventListener('DOMContentLoaded', () => {
+    initializeFirebase();
+    document.getElementById('contactForm').addEventListener('submit', handleFormSubmit);
+  });
+
+  // Global test function
+  window.testFirebase = function() {
+    if (!database) {
+      console.log('❌ Database not initialized');
+      return;
+    }
+    
+    const testRef = ref(database, 'test');
+    push(testRef, {
+      test: 'Hello Firebase!',
+      timestamp: serverTimestamp()
+    }).then(() => {
+      console.log('✅ Test successful!');
+    }).catch((error) => {
+      console.error('❌ Test failed:', error);
+    });
+  };
+
+</script>
+
+<!-- Fallback for older browsers -->
+<script nomodule>
+  document.getElementById('debugInfo').textContent = '❌ Your browser doesn\'t support ES6 modules. Please update your browser.';
+  document.getElementById('debugInfo').style.color = '#f44336';
+</script>
+
+</body>
+</html>
